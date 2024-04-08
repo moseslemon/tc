@@ -1,0 +1,41 @@
+#!/bin/bash
+
+VERSION=3.0.0
+APP=taskwarrior
+ARCH=${APP}-${VERSION}.tar.gz
+URL_SRC="https://github.com/GothenburgBitFactory/taskwarrior/releases/download/v${VERSION}/task-${VERSION}.tar.gz"
+
+
+rm -rf /tmp/${APP} /tmp/${APP}-${VERSION}
+if [[ ! -f ${ARCH} ]]; then
+  p=`pwd`
+  echo "${ARCH} not found";
+  mkdir /tmp/${APP}-${VERSION}
+  git clone --recurse-submodules https://github.com/GothenburgBitFactory/taskwarrior /tmp/${APP}-${VERSION}/
+  pushd ${p}
+  cd /tmp/
+  tar -czvf ${p}/${ARCH} ${APP}-${VERSION}/
+  popd
+fi
+
+rm -rf /tmp/${APP}-${VERSION}
+tar -xvf ${ARCH} -C /tmp/
+
+if [[ -f /etc/portage/make.conf ]]; then
+  CPU=`cat /etc/portage/make.conf | grep "^CFLAGS=" | sed -e "s|.*\(-march=\S*\)\s.*|\1|"`
+else
+  CPU="-march=x86-64"
+fi
+
+
+cd /tmp/${APP}-${VERSION}
+
+export CFLAGS="-fuse-linker-plugin -s -O2 -pipe ${CPU} -mtune=generic"
+export CXXFLAGS="-fuse-linker-plugin -s -O2 -pipe ${CPU} -mtune=generic"
+
+export LDFLAGS="-s -O2"
+cmake -S . -B build  -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+
+[[ -f ./build/src/task ]] && cp ./build/src/task  ~/bin/
+
