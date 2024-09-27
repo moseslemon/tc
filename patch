@@ -1,0 +1,101 @@
+--- shelldecrypt/shelldecrypt.c	2009-06-12 10:04:19.000000000 +0200
++++ shelldecrypt/shelldecrypt.c	2024-09-26 20:44:56.029173394 +0200
+@@ -112,10 +112,12 @@
+   foundnl = 0;
+   foundinterpreter = 0;
+   currentchar = 0;
++  int counter = 0;
+   while ((ch = fgetc (fp)) != EOF)
+     {
+       char decryptedchar;
+-      decryptedchar = decrypt (ch);
++      counter = (counter + 1) % 12;
++      decryptedchar = decrypt (ch, counter);
+ 
+       /* notice this will keep a newline at the end of our firstline */
+       firstline[currentchar] = decryptedchar;
+@@ -173,9 +175,11 @@
+ 	}
+ 
+       /* Stuff the rest of the file on through */
++      int counter = 0;
+       while ((ch = fgetc (fp)) != EOF)
+ 	{
+-	  (void) fputc (decrypt (ch), pipe);
++          counter = (counter + 1) % 12;
++	  (void) fputc (decrypt (ch, counter), pipe);
+ 	}
+ /*            (void) fputc(EOF,pipe); */
+     }
+
+--- shellcrypt/shellcrypt.c	2009-06-12 10:04:17.000000000 +0200
++++ shellcrypt/shellcrypt.c	2024-09-26 20:42:54.087876844 +0200
+@@ -207,9 +207,11 @@
+ 	     them out to target file 
+ 	   */
+ 
++          int counter = 0;
+ 	  while ((ch = fgetc (fp)) != EOF)
+-	    {
+-	      (void) fputc (encrypt (ch), fpOut);
++	    {	      
++	      counter = (counter + 1) % 12;
++	      (void) fputc (encrypt (ch, counter), fpOut);
+ 	    }
+ 	}
+ 
+--- libshellcrypt/shellcryptlib.h	2009-06-12 10:04:15.000000000 +0200
++++ libshellcrypt/shellcryptlib.h	2024-09-26 20:22:32.329623784 +0200
+@@ -9,5 +9,5 @@
+ 
+ /* The one global variable */
+ 
+-int encrypt (int a);
+-int decrypt (int a);
++int encrypt (int a, int counter);
++int decrypt (int a, int counter);
+
+--- libshellcrypt/shellcryptlib.c	2009-06-12 10:04:15.000000000 +0200
++++ libshellcrypt/shellcryptlib.c	2024-09-26 20:21:58.658116206 +0200
+@@ -15,12 +15,12 @@
+    returns ecrypted data
+ */
+ int
+-encrypt (int a)
++encrypt (int a, int counter)
+ {
+-  int b;
+-  b = a;
+-  b ^= 0x000C;
+-  return b;
++//  int b;
++//  b = a;
++//  b ^= 0x000C;
++  return a ^ (0x000C + counter);
+ }
+ 
+ /* Function decrypt
+@@ -32,7 +32,7 @@
+           AT SECOND INVOCATION
+ */
+ int
+-decrypt (int a)
++decrypt (int a, int counter)
+ {
+-  return (encrypt (a));
++  return (encrypt (a, counter));
+ }
+--- configure.org	2024-09-26 21:29:36.781454003 +0200
++++ configure	2024-09-26 21:29:48.195259518 +0200
+@@ -3056,9 +3056,9 @@
+   CFLAGS=$ac_save_CFLAGS
+ elif test $ac_cv_prog_cc_g = yes; then
+   if test "$GCC" = yes; then
+-    CFLAGS="-g -O2"
++    CFLAGS="-s -O2"
+   else
+-    CFLAGS="-g"
++    CFLAGS="-s"
+   fi
+ else
+   if test "$GCC" = yes; then
